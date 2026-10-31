@@ -289,10 +289,12 @@ class DiscountRule(Base):
     applies_to = Column(Enum(DiscountAppliesTo), nullable=False, default=DiscountAppliesTo.subscription)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     subscription_id = Column(Integer, ForeignKey("subscriptions.id", ondelete="SET NULL"), nullable=True)
+    plan_id = Column(Integer, ForeignKey("plans.id", ondelete="SET NULL"), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
     product = relationship("Product")
     subscription = relationship("Subscription")
+    plan = relationship("Plan")
 
 
 class Invoice(Base):

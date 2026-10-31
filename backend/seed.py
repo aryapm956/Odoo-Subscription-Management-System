@@ -15,16 +15,33 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 # Bootstrap DB
-from app.database import engine, SessionLocal, Base
+from app.database import engine, SessionLocal, Base, ensure_sqlite_schema
 from app import models
 from app.auth import hash_password
 from app.billing import next_invoice_number, next_subscription_number, advance_date
 
 Base.metadata.create_all(bind=engine)
+ensure_sqlite_schema()
 db = SessionLocal()
 
 LARGE = "--large" in sys.argv
 print(f"Seeding database... (large={LARGE})")
+
+
+def normalize_next_billing(session, today):
+    """Move seeded active subscriptions' next billing date to today or later."""
+    active_subs = session.query(models.Subscription).filter(
+        models.Subscription.status == models.SubscriptionStatus.active
+    ).all()
+    for sub in active_subs:
+        if not sub.next_billing_date or sub.next_billing_date >= today:
+            continue
+        next_date = sub.next_billing_date
+        guard = 0
+        while next_date < today and guard < 1000:
+            next_date = advance_date(next_date, sub.plan.billing_period)
+            guard += 1
+        sub.next_billing_date = next_date
 
 
 def rnd_str(n=8):
@@ -309,6 +326,7 @@ if not LARGE_ONLY:
         type=models.DiscountType.fixed,
         value=Decimal("500.00"),
         applies_to=models.DiscountAppliesTo.subscription,
+        plan_id=yearly_plan.id,
         is_active=True,
     )
     disc3 = models.DiscountRule(
@@ -605,6 +623,7 @@ if not LARGE_ONLY:
             if p_start < today:
                 create_invoice(sub, p_start, p_end, models.InvoiceStatus.paid, pay_full=True)
 
+    normalize_next_billing(db, today)
     db.commit()
     print("Standard seed complete.")
     print(f"  Admin: admin@brightloop.com / Admin@12345")

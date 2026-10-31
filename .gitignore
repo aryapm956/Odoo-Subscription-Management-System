@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Frontend
+node_modules/
+dist/
+
+# Environment
+.env

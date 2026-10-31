@@ -28,6 +28,7 @@ class DiscountCreate(BaseModel):
     applies_to: str = "subscription"
     product_id: Optional[int] = None
     subscription_id: Optional[int] = None
+    plan_id: Optional[int] = None
 
 
 class DiscountUpdate(BaseModel):
@@ -38,6 +39,7 @@ class DiscountUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     usage_limit: Optional[int] = None
+    plan_id: Optional[int] = None
     is_active: Optional[bool] = None
 
 
@@ -56,6 +58,7 @@ def discount_to_dict(d: models.DiscountRule) -> dict:
         "applies_to": d.applies_to.value,
         "product_id": d.product_id,
         "subscription_id": d.subscription_id,
+        "plan_id": d.plan_id,
         "is_active": d.is_active,
     }
 
@@ -96,6 +99,7 @@ def create_discount(
         applies_to=models.DiscountAppliesTo(data.applies_to),
         product_id=data.product_id,
         subscription_id=data.subscription_id,
+        plan_id=data.plan_id,
     )
     db.add(discount)
     db.commit()

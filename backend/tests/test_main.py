@@ -349,8 +349,8 @@ class TestIdempotentBilling:
         result2 = run_billing(db, today=date.today())
 
         assert result1["created"] == 1
-        assert result2["created"] == 0  # idempotent
-        assert result2["skipped"] == 1
+        assert result2["created"] == 0  # next billing date already advanced
+        assert result2["skipped"] == 0
 
         inv_count = db.query(models.Invoice).filter(
             models.Invoice.subscription_id == sub.id
@@ -466,6 +466,80 @@ class TestDiscounts:
         inv = db.query(models.Invoice).filter(models.Invoice.subscription_id == sub.id).first()
         assert float(inv.discount_total) == 100.0  # 10% of 1000
 
+    def test_plan_scoped_discount_only_applies_to_matching_plan(self, db):
+        from app.billing import run_billing
+        tax = create_tax(db)
+        product = create_product(db)
+        yearly_plan = create_plan(
+            db, name="Yearly Plan", billing_period=models.BillingPeriod.yearly
+        )
+        daily_plan = create_plan(
+            db, name="Daily Plan", billing_period=models.BillingPeriod.daily
+        )
+        cust = models.Customer(name="PlanScope", email="planscope@test.com")
+        db.add(cust)
+        db.flush()
+
+        yearly_sub = create_subscription(
+            db, cust, yearly_plan, models.SubscriptionStatus.active,
+            lines=[{"product_id": product.id, "unit_price": Decimal("1000.00"), "tax_id": tax.id}],
+        )
+        daily_sub = create_subscription(
+            db, cust, daily_plan, models.SubscriptionStatus.active,
+            lines=[{"product_id": product.id, "unit_price": Decimal("299.00"), "tax_id": tax.id}],
+        )
+        disc = models.DiscountRule(
+            name="Yearly only ₹500", type=models.DiscountType.fixed, value=Decimal("500"),
+            applies_to=models.DiscountAppliesTo.subscription,
+            plan_id=yearly_plan.id,
+            is_active=True,
+        )
+        db.add(disc)
+        db.commit()
+
+        run_billing(db, today=date.today())
+
+        yearly_inv = db.query(models.Invoice).filter(
+            models.Invoice.subscription_id == yearly_sub.id
+        ).first()
+        daily_inv = db.query(models.Invoice).filter(
+            models.Invoice.subscription_id == daily_sub.id
+        ).first()
+        assert yearly_inv is not None
+        assert float(yearly_inv.discount_total) == 500.0
+        assert daily_inv is not None
+        assert float(daily_inv.discount_total) == 0.0
+        assert disc.times_used == 1
+
+    def test_zero_total_invoice_is_skipped(self, db):
+        from app.billing import run_billing
+        tax = create_tax(db)
+        product = create_product(db)
+        plan = create_plan(db, name="Daily Plan", billing_period=models.BillingPeriod.daily)
+        cust = models.Customer(name="ZeroTotal", email="zerototal@test.com")
+        db.add(cust)
+        db.flush()
+        sub = create_subscription(
+            db, cust, plan, models.SubscriptionStatus.active,
+            lines=[{"product_id": product.id, "unit_price": Decimal("299.00"), "tax_id": tax.id}],
+        )
+        disc = models.DiscountRule(
+            name="Over-discount", type=models.DiscountType.fixed, value=Decimal("500"),
+            applies_to=models.DiscountAppliesTo.subscription,
+            is_active=True,
+        )
+        db.add(disc)
+        db.commit()
+
+        result = run_billing(db, today=date.today())
+
+        assert result["created"] == 0
+        assert result["skipped"] == 1
+        assert db.query(models.Invoice).filter(
+            models.Invoice.subscription_id == sub.id
+        ).count() == 0
+        assert disc.times_used == 0
+
 
 # ---------------------------------------------------------------------------
 # 8. Partial payments -> paid
@@ -480,10 +554,11 @@ class TestPayments:
         cust = models.Customer(name="PayTest", email="pay@test.com")
         db.add(cust)
         db.flush()
+        sub = create_subscription(db, cust, plan, models.SubscriptionStatus.active)
 
         inv = models.Invoice(
             number="INV-TEST-01",
-            subscription_id=None,
+            subscription_id=sub.id,
             customer_id=cust.id,
             billing_period_start=date.today(),
             billing_period_end=date.today(),
@@ -517,10 +592,12 @@ class TestPayments:
         cust = models.Customer(name="OPTest", email="op@test.com")
         db.add(cust)
         db.flush()
+        plan = create_plan(db)
+        sub = create_subscription(db, cust, plan, models.SubscriptionStatus.active)
 
         inv = models.Invoice(
             number="INV-TEST-02",
-            subscription_id=None,
+            subscription_id=sub.id,
             customer_id=cust.id,
             billing_period_start=date.today(),
             billing_period_end=date.today(),
@@ -553,10 +630,12 @@ class TestOverdueDetection:
         cust = models.Customer(name="OD", email="od@test.com")
         db.add(cust)
         db.flush()
+        plan = create_plan(db)
+        sub = create_subscription(db, cust, plan, models.SubscriptionStatus.active)
 
         inv = models.Invoice(
             number="INV-OD-01",
-            subscription_id=None,
+            subscription_id=sub.id,
             customer_id=cust.id,
             billing_period_start=date.today() - timedelta(days=30),
             billing_period_end=date.today() - timedelta(days=1),

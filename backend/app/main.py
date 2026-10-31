@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.database import engine, SessionLocal, Base
+from app.database import engine, SessionLocal, Base, ensure_sqlite_schema
 
 # Import all models so tables get created
 from app import models  # noqa: F401
@@ -50,8 +50,9 @@ def scheduled_billing():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables
+    # Create tables and apply additive schema updates
     Base.metadata.create_all(bind=engine)
+    ensure_sqlite_schema()
 
     # Start scheduler (daily at midnight)
     scheduler.add_job(scheduled_billing, "cron", hour=0, minute=0)

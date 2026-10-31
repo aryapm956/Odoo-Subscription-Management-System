@@ -136,6 +136,8 @@ def _generate_invoice_for_period(
             r for r in rules
             if r.applies_to == models.DiscountAppliesTo.product
             and r.product_id == sub_line.product_id
+            and (r.subscription_id is None or r.subscription_id == subscription.id)
+            and (r.plan_id is None or r.plan_id == subscription.plan_id)
             and (r.min_purchase is None or line_gross >= r.min_purchase)
             and (r.min_quantity is None or qty >= r.min_quantity)
         ]
@@ -168,6 +170,7 @@ def _generate_invoice_for_period(
         r for r in rules
         if r.applies_to == models.DiscountAppliesTo.subscription
         and (r.subscription_id is None or r.subscription_id == subscription.id)
+        and (r.plan_id is None or r.plan_id == subscription.plan_id)
         and (r.min_purchase is None or subtotal >= r.min_purchase)
         and (r.min_quantity is None or total_qty >= r.min_quantity)
     ]
@@ -224,16 +227,25 @@ def _generate_invoice_for_period(
         discount_total += line_discount
         tax_total += line_tax
 
+    subtotal = _round(subtotal)
+    discount_total = _round(discount_total)
+    tax_total = _round(tax_total)
+    discount_total = min(discount_total, subtotal)
+    total = _round(subtotal - discount_total + tax_total)
+    total = max(total, ZERO)  # never negative
+
+    if total <= ZERO:
+        logger.info(
+            "Skipping zero-total invoice for subscription %s period %s",
+            subscription.number,
+            period_start,
+        )
+        return None
+
     # Each discount rule counts once per invoice it is applied to
     for rule in rules:
         if rule.id in used_rule_ids:
             rule.times_used += 1
-
-    subtotal = _round(subtotal)
-    discount_total = _round(discount_total)
-    tax_total = _round(tax_total)
-    total = _round(subtotal - discount_total + tax_total)
-    total = max(total, ZERO)  # never negative
 
     invoice = models.Invoice(
         number=next_invoice_number(db),

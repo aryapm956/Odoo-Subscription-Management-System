@@ -16,6 +16,7 @@ const EMPTY = {
   applies_to: 'subscription',
   product_id: '',
   subscription_id: '',
+  plan_id: '',
 }
 
 function discountState(d) {
@@ -36,6 +37,7 @@ export default function Discounts() {
   const discounts = useApi('/discounts', { page, page_size: 20 })
   const products = useApi('/products', { page_size: 200 })
   const subscriptions = useApi('/subscriptions', { page_size: 100 })
+  const plans = useApi('/plans', { page_size: 100 })
 
   async function save(e) {
     e.preventDefault()
@@ -56,6 +58,7 @@ export default function Discounts() {
           applies_to: form.applies_to,
           product_id: form.applies_to === 'product' && form.product_id ? Number(form.product_id) : null,
           subscription_id: form.applies_to === 'subscription' && form.subscription_id ? Number(form.subscription_id) : null,
+          plan_id: form.plan_id ? Number(form.plan_id) : null,
         },
       })
       setModal(false)
@@ -99,6 +102,7 @@ export default function Discounts() {
                 {discounts.data.items.map((d) => {
                   const state = discountState(d)
                   const product = products.data?.items?.find((p) => p.id === d.product_id)
+                  const plan = plans.data?.items?.find((p) => p.id === d.plan_id)
                   return (
                     <tr key={d.id}>
                       <td><strong>{d.name}</strong></td>
@@ -109,6 +113,7 @@ export default function Discounts() {
                           : d.subscription_id
                             ? `Subscription #${d.subscription_id}`
                             : 'Whole subscription'}
+                        {plan ? ` · ${plan.name} only` : ''}
                       </td>
                       <td className="small">
                         {d.min_purchase ? `Min purchase ${formatMoney(d.min_purchase)}` : 'No min purchase'}
@@ -164,6 +169,14 @@ export default function Discounts() {
               <select className="input" value={form.applies_to} onChange={(e) => setForm({ ...form, applies_to: e.target.value })}>
                 <option value="subscription">Whole subscription</option>
                 <option value="product">Specific product</option>
+              </select>
+            </Field>
+            <Field label="Limit to one plan" hint="Leave blank to apply to every plan.">
+              <select className="input" value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })}>
+                <option value="">All plans</option>
+                {(plans.data?.items || []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} · {p.billing_period}</option>
+                ))}
               </select>
             </Field>
             {form.applies_to === 'product' && (

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.config import get_settings
 
@@ -24,6 +24,21 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
     pass
+
+
+def ensure_sqlite_schema() -> None:
+    """Apply small additive migrations for existing SQLite databases."""
+    if "sqlite" not in str(engine.url):
+        return
+    inspector = inspect(engine)
+    if "discount_rules" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("discount_rules")}
+    if "plan_id" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE discount_rules ADD COLUMN plan_id INTEGER REFERENCES plans(id)")
+            )
 
 
 def get_db():
