@@ -160,7 +160,7 @@ function AuthRouter({ path, params, navigate }) {
   return <LoginPage navigate={navigate} />
 }
 
-function AppRouter({ path, params, navigate }) {
+function AppRouter({ path, navigate }) {
   const { user } = useAuth()
   const detail = path.match(/^\/(?:portal\/)?subscriptions\/(\d+)$/)
   const invoiceDetail = path.match(/^\/(?:portal\/)?invoices\/(\d+)$/)
@@ -169,11 +169,11 @@ function AppRouter({ path, params, navigate }) {
   if (invoiceDetail) return <InvoiceDetail id={Number(invoiceDetail[1])} navigate={navigate} />
 
   if (user.role === 'customer') {
-    if (path === '/portal/invoices') return <Invoices portal />
+    if (path === '/portal/invoices') return <Invoices portal navigate={navigate} />
     if (path === '/portal/payments') return <Payments portal />
-    if (path === '/portal/subscriptions' || path === '/') return <Subscriptions portal />
+    if (path === '/portal/subscriptions' || path === '/') return <Subscriptions portal navigate={navigate} />
     if (path === '/dev-outbox') return <DevOutboxPage navigate={navigate} />
-    return <Subscriptions portal />
+    return <Subscriptions portal navigate={navigate} />
   }
 
   switch (path) {
@@ -222,7 +222,7 @@ export default function App() {
 
   return (
     <Shell path={path} navigate={navigate}>
-      <AppRouter path={path} params={params} navigate={navigate} />
+      <AppRouter path={path} navigate={navigate} />
     </Shell>
   )
 }

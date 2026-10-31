@@ -201,24 +201,23 @@ def revenue_report(
     current_user: models.User = Depends(require_staff_or_admin),
 ):
     from sqlalchemy.orm import selectinload
-    q = db.query(models.Payment).options(
-        selectinload(models.Payment.invoice).selectinload(models.Invoice.customer)
+    q = (
+        db.query(models.Payment)
+        .join(models.Invoice, models.Payment.invoice_id == models.Invoice.id)
+        .options(selectinload(models.Payment.invoice).selectinload(models.Invoice.customer))
+        .filter(models.Invoice.status != models.InvoiceStatus.cancelled)
     )
     if from_date:
         q = q.filter(models.Payment.date >= from_date)
     if to_date:
         q = q.filter(models.Payment.date <= to_date)
     total = q.count()
+    total_amount = q.with_entities(
+        func.coalesce(func.sum(models.Payment.amount), 0)
+    ).scalar()
     payments = q.order_by(models.Payment.date.desc()).offset(
         (page - 1) * page_size
     ).limit(page_size).all()
-    total_amount = db.query(func.sum(models.Payment.amount)).join(
-        models.Invoice, models.Payment.invoice_id == models.Invoice.id
-    ).filter(
-        models.Invoice.status != models.InvoiceStatus.cancelled,
-        *(([models.Payment.date >= from_date] if from_date else []) +
-          ([models.Payment.date <= to_date] if to_date else []))
-    ).scalar() or 0
     return {
         "total": total,
         "total_amount": float(total_amount),

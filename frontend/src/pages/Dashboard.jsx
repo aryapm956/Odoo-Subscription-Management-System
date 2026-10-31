@@ -1,6 +1,6 @@
 import { useApi } from '../hooks'
 import { formatMoney } from '../api'
-import { Card, PageHeader, Spinner, ErrorBanner, Button, Badge } from '../components/ui'
+import { Card, PageHeader, Spinner, ErrorBanner, Button } from '../components/ui'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -84,13 +84,11 @@ export default function Dashboard({ navigate }) {
             <div className="status-bars">
               {statuses.map((row) => (
                 <div className="status-bar-row" key={row.status}>
-                  <div className="row-between">
-                    <Badge status={row.status} />
-                    <strong>{row.count}</strong>
-                  </div>
+                  <span>{row.status}</span>
                   <div className="track">
                     <div className={`fill fill-${row.status}`} style={{ width: `${(row.count / maxStatus) * 100}%` }} />
                   </div>
+                  <strong>{row.count}</strong>
                 </div>
               ))}
             </div>

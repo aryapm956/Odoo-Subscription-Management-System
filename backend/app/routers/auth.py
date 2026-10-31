@@ -157,7 +157,7 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         db.add(reset_record)
         db.commit()
 
-        reset_url = f"{settings.frontend_url}/reset-password?token={raw_token}"
+        reset_url = f"{settings.frontend_url}/#/reset-password?token={raw_token}"
         send_password_reset(user.email, reset_url, user.name)
 
     return {"message": "If that email is registered, a reset link has been sent."}
