@@ -146,7 +146,7 @@ export default function Discounts() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save discount'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Saving…' : 'Save discount'}</Button>
           </>
         }
       >

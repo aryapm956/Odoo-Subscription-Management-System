@@ -1,14 +1,14 @@
 import { useApi } from '../hooks'
 import { formatMoney } from '../api'
-import { Card, PageHeader, Spinner, ErrorBanner, Button } from '../components/ui'
+import { Card, PageHeader, Spinner, ErrorBanner, Button, AnimatedNumber } from '../components/ui'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-function Kpi({ label, value, hint, tone = '' }) {
+function Kpi({ label, value, hint, tone = '', currency = false }) {
   return (
     <div className={`kpi ${tone}`}>
       <span className="kpi-label">{label}</span>
-      <strong className="kpi-value">{value}</strong>
+      <strong className="kpi-value"><AnimatedNumber value={value} currency={currency} /></strong>
       {hint && <span className="kpi-hint">{hint}</span>}
     </div>
   )
@@ -43,9 +43,9 @@ export default function Dashboard({ navigate }) {
 
       <div className="kpi-grid">
         <Kpi label="Active subscriptions" value={kpis.active_subscriptions ?? 0} hint="Excluding drafts and closed" tone="tone-indigo" />
-        <Kpi label="Monthly recurring revenue" value={formatMoney(kpis.mrr)} hint="Normalized from daily / weekly / yearly" tone="tone-green" />
-        <Kpi label="Revenue collected" value={formatMoney(kpis.total_revenue)} hint="All recorded payments" tone="tone-blue" />
-        <Kpi label="Outstanding" value={formatMoney(kpis.total_outstanding)} hint="Confirmed invoices with a balance" tone="tone-amber" />
+        <Kpi label="Monthly recurring revenue" value={kpis.mrr ?? 0} hint="Normalized from daily / weekly / yearly" tone="tone-green" currency />
+        <Kpi label="Revenue collected" value={kpis.total_revenue ?? 0} hint="All recorded payments" tone="tone-blue" currency />
+        <Kpi label="Outstanding" value={kpis.total_outstanding ?? 0} hint="Confirmed invoices with a balance" tone="tone-amber" currency />
         <Kpi label="Overdue invoices" value={kpis.overdue_count ?? 0} hint={`${formatMoney(kpis.overdue_amount)} past due`} tone="tone-red" />
       </div>
 
@@ -58,7 +58,13 @@ export default function Dashboard({ navigate }) {
               {revenue.map((row) => (
                 <div className="bar-col" key={`${row.year}-${row.month}`}>
                   <div className="bar-wrap">
-                    <div className="bar" style={{ height: `${Math.max(4, (row.revenue / maxRevenue) * 100)}%` }} title={formatMoney(row.revenue)} />
+                    <div
+                      className="bar"
+                      style={{ height: `${Math.max(4, (row.revenue / maxRevenue) * 100)}%`, animationDelay: `${revenue.indexOf(row) * 25}ms` }}
+                      data-tooltip={formatMoney(row.revenue)}
+                      title={formatMoney(row.revenue)}
+                      aria-label={`${MONTHS[row.month - 1]} ${row.year}: ${formatMoney(row.revenue)}`}
+                    />
                   </div>
                   <span className="bar-label">
                     {MONTHS[row.month - 1]} {String(row.year).slice(2)}
@@ -86,7 +92,11 @@ export default function Dashboard({ navigate }) {
                 <div className="status-bar-row" key={row.status}>
                   <span>{row.status}</span>
                   <div className="track">
-                    <div className={`fill fill-${row.status}`} style={{ width: `${(row.count / maxStatus) * 100}%` }} />
+                    <div
+                      className={`fill fill-${row.status}`}
+                      style={{ width: `${(row.count / maxStatus) * 100}%`, animationDelay: `${statuses.indexOf(row) * 35}ms` }}
+                      data-tooltip={`${row.count} ${row.status}`}
+                    />
                   </div>
                   <strong>{row.count}</strong>
                 </div>

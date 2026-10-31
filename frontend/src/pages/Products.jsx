@@ -219,7 +219,7 @@ export default function Products() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(null)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save product'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Saving…' : 'Save product'}</Button>
           </>
         }
       >

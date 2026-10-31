@@ -1,7 +1,22 @@
-import { useState } from 'react'
+import { Component, useState } from 'react'
 import { downloadCsv, formatDate, formatMoney } from '../api'
 import { useApi } from '../hooks'
 import { PageHeader, Card, Button, Spinner, ErrorBanner, EmptyState, Pagination, Badge, Tabs } from '../components/ui'
+
+class ReportsErrorBoundary extends Component {
+  state = { hasError: false }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="alert alert-error" role="alert">Reports could not be displayed. Try reloading the page.</div>
+    }
+    return this.props.children
+  }
+}
 
 const TABS = [
   { value: 'active', label: 'Active subscriptions' },
@@ -9,7 +24,7 @@ const TABS = [
   { value: 'overdue', label: 'Overdue invoices' },
 ]
 
-export default function Reports() {
+function ReportsContent() {
   const [tab, setTab] = useState('active')
   const [page, setPage] = useState(1)
   const [planId, setPlanId] = useState('')
@@ -34,6 +49,10 @@ export default function Reports() {
         : { page, page_size: 20 }
 
   const report = useApi(path, params)
+  const reportMatchesTab = tab !== 'revenue' || report.data?.total_amount !== undefined
+  const reportData = reportMatchesTab ? report.data : null
+  const reportItems = Array.isArray(reportData?.items) ? reportData.items : []
+  const reportLoading = report.loading || (!report.error && Boolean(report.data) && !reportMatchesTab)
 
   function changeTab(next) {
     setTab(next)
@@ -85,17 +104,17 @@ export default function Reports() {
             </>
           )}
           <span className="muted small">
-            {tab === 'revenue' && report.data?.total_amount !== undefined
-              ? `${formatMoney(report.data.total_amount)} collected · ${report.data.total} payments`
-              : `${report.data?.total ?? 0} records`}
+            {tab === 'revenue' && reportData?.total_amount !== undefined
+              ? `${formatMoney(Number(reportData.total_amount ?? 0))} collected · ${Number(reportData.total ?? 0)} payments`
+              : `${Number(reportData?.total ?? 0)} records`}
           </span>
         </div>
 
         <ErrorBanner message={report.error || exportError} onRetry={report.reload} />
-        {report.loading && !report.data ? (
+        {reportLoading ? (
           <Spinner />
         ) : tab === 'active' ? (
-          !report.data?.items?.length ? (
+          !reportItems.length ? (
             <EmptyState title="No active subscriptions" hint="Activate a subscription to see it here." />
           ) : (
             <div className="table-wrap">
@@ -112,7 +131,7 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.data.items.map((row) => (
+                  {reportItems.map((row) => (
                     <tr key={row.id}>
                       <td><strong>{row.number}</strong></td>
                       <td>{row.customer}</td>
@@ -128,7 +147,7 @@ export default function Reports() {
             </div>
           )
         ) : tab === 'revenue' ? (
-          !report.data?.items?.length ? (
+          !reportItems.length ? (
             <EmptyState title="No payments in this period" hint="Adjust the date filters or record a payment." />
           ) : (
             <div className="table-wrap">
@@ -144,13 +163,13 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.data.items.map((row) => (
+                  {reportItems.map((row) => (
                     <tr key={row.id}>
                       <td>{formatDate(row.date)}</td>
                       <td><strong>{row.invoice || '—'}</strong></td>
                       <td>{row.customer || '—'}</td>
-                      <td><Badge status="quotation">{row.method.replace('_', ' ')}</Badge></td>
-                      <td className="num">{formatMoney(row.amount)}</td>
+                      <td><Badge status="quotation">{String(row.method ?? '—').replace('_', ' ')}</Badge></td>
+                      <td className="num">{formatMoney(Number(row.amount ?? 0))}</td>
                       <td className="small">{row.note || '—'}</td>
                     </tr>
                   ))}
@@ -158,7 +177,7 @@ export default function Reports() {
               </table>
             </div>
           )
-        ) : !report.data?.items?.length ? (
+        ) : !reportItems.length ? (
           <EmptyState title="No overdue invoices" hint="Nothing past due right now." />
         ) : (
           <div className="table-wrap">
@@ -175,7 +194,7 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {report.data.items.map((row) => (
+                {reportItems.map((row) => (
                   <tr key={row.id}>
                     <td><strong>{row.number}</strong></td>
                     <td>{row.customer}</td>
@@ -190,8 +209,16 @@ export default function Reports() {
             </table>
           </div>
         )}
-        <Pagination page={page} pageSize={20} total={report.data?.total || 0} onPage={setPage} />
+        <Pagination page={page} pageSize={20} total={Number(reportData?.total ?? 0)} onPage={setPage} />
       </Card>
     </>
+  )
+}
+
+export default function Reports() {
+  return (
+    <ReportsErrorBoundary>
+      <ReportsContent />
+    </ReportsErrorBoundary>
   )
 }

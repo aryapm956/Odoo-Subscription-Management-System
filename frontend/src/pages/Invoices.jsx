@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api, formatDate, formatMoney } from '../api'
 import { useApi } from '../hooks'
 import { useAuth } from '../auth'
-import { PageHeader, Card, Button, Spinner, ErrorBanner, EmptyState, Pagination, Badge, SuccessBanner } from '../components/ui'
+import { PageHeader, Card, Button, Spinner, ErrorBanner, EmptyState, Pagination, Badge, AnimatedNumber, Toast } from '../components/ui'
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -21,6 +21,7 @@ export default function Invoices({ navigate, portal = false }) {
   const [search, setSearch] = useState('')
   const [billing, setBilling] = useState(null)
   const [error, setError] = useState('')
+  const [billingBusy, setBillingBusy] = useState(false)
 
   const params = {
     page,
@@ -36,12 +37,15 @@ export default function Invoices({ navigate, portal = false }) {
   async function runBilling() {
     setBilling(null)
     setError('')
+    setBillingBusy(true)
     try {
       const result = await api('/invoices/billing-run', { method: 'POST' })
-      setBilling(`Billing run complete: ${result.created} created, ${result.skipped} skipped, ${result.failed} failed.`)
+      setBilling({ created: result.created, skipped: result.skipped, failed: result.failed })
       invoices.reload()
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBillingBusy(false)
     }
   }
 
@@ -50,9 +54,15 @@ export default function Invoices({ navigate, portal = false }) {
       <PageHeader
         title={portal ? 'My invoices' : 'Invoices'}
         subtitle={portal ? 'Everything Brightloop has billed you.' : 'Draft, confirmed, paid and cancelled invoices in one ledger.'}
-        actions={isStaff && !portal ? <Button onClick={runBilling}>Run billing</Button> : null}
+        actions={isStaff && !portal ? <Button onClick={runBilling} loading={billingBusy}>Run billing</Button> : null}
       />
-      <SuccessBanner message={billing} />
+      {billing && (
+        <div className="billing-result" role="status">
+          <span className="billing-check" aria-hidden="true">✓</span>
+          <span>Billing run complete: <strong><AnimatedNumber value={billing.created} /></strong> created, <strong><AnimatedNumber value={billing.skipped} /></strong> skipped, <strong><AnimatedNumber value={billing.failed} /></strong> failed.</span>
+        </div>
+      )}
+      <Toast key={billing ? `${billing.created}-${billing.skipped}-${billing.failed}` : 'no-billing'} message={billing ? `Billing run finished: ${billing.created} created, ${billing.skipped} skipped, ${billing.failed} failed.` : ''} />
       <Card>
         <div className="toolbar wrap">
           <div className="filter-pills">

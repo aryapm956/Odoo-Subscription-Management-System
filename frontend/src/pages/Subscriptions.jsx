@@ -251,7 +251,7 @@ export default function Subscriptions({ navigate, portal = false }) {
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-              <Button onClick={save} disabled={busy}>{busy ? 'Creating…' : 'Create subscription'}</Button>
+              <Button onClick={save} loading={busy}>{busy ? 'Creating…' : 'Create subscription'}</Button>
             </>
           }
         >

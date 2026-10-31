@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api, formatDate, formatMoney, todayISO } from '../api'
 import { useApi } from '../hooks'
 import { useAuth } from '../auth'
-import { PageHeader, Card, Button, Field, Modal, Spinner, ErrorBanner, Badge, SuccessBanner, EmptyState } from '../components/ui'
+import { PageHeader, Card, Button, Field, Modal, Spinner, ErrorBanner, Badge, EmptyState, Toast } from '../components/ui'
 
 const METHODS = ['card', 'bank_transfer', 'cash', 'upi', 'cheque', 'other']
 
@@ -14,6 +14,7 @@ export default function InvoiceDetail({ id, navigate }) {
   const [message, setMessage] = useState('')
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState('')
+  const [confetti, setConfetti] = useState(false)
 
   async function action(name, fn) {
     setBusy(name)
@@ -31,6 +32,7 @@ export default function InvoiceDetail({ id, navigate }) {
   }
 
   function openPayment() {
+    setMessage('')
     setPayment({ method: 'bank_transfer', amount: invoice?.balance_due ? String(invoice.balance_due) : '', date: todayISO(), note: '' })
     setActionError('')
     setPayOpen(true)
@@ -56,6 +58,10 @@ export default function InvoiceDetail({ id, navigate }) {
       })
       setPayOpen(false)
       setMessage('Payment recorded.')
+      if (amount >= Number(invoice.balance_due) - 0.01) {
+        setConfetti(true)
+        window.setTimeout(() => setConfetti(false), 500)
+      }
       reload()
     } catch (err) {
       setActionError(err.message)
@@ -85,25 +91,39 @@ export default function InvoiceDetail({ id, navigate }) {
         }
       />
 
-      <SuccessBanner message={message} />
+      <Toast key={message || 'no-message'} message={message} onClose={() => setMessage('')} />
       <ErrorBanner message={actionError} />
+      {confetti && (
+        <div className="confetti-burst" aria-hidden="true">
+          {Array.from({ length: 18 }, (_, index) => (
+            <span
+              key={index}
+              style={{
+                '--confetti-index': index,
+                '--confetti-x': `${(index % 6 - 2.5) * 28}px`,
+                '--confetti-y': `${-35 - Math.floor(index / 6) * 24}px`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {isStaff && (
         <Card title="Invoice actions" subtitle="Status changes are validated by the server.">
           <div className="action-row">
             {invoice.status === 'draft' && (
-              <Button onClick={() => action('Confirm', () => api(`/invoices/${id}/confirm`, { method: 'POST' }))} disabled={Boolean(busy)}>
+              <Button onClick={() => action('Confirm', () => api(`/invoices/${id}/confirm`, { method: 'POST' }))} disabled={Boolean(busy)} loading={busy === 'Confirm'}>
                 Confirm invoice
               </Button>
             )}
             {invoice.status !== 'draft' && invoice.status !== 'cancelled' && (
-              <Button variant="ghost" onClick={() => action('Send', () => api(`/invoices/${id}/send`, { method: 'POST' }))} disabled={Boolean(busy)}>
+              <Button variant="ghost" onClick={() => action('Send', () => api(`/invoices/${id}/send`, { method: 'POST' }))} disabled={Boolean(busy)} loading={busy === 'Send'}>
                 Send by email
               </Button>
             )}
             {canPay && <Button onClick={openPayment} disabled={Boolean(busy)}>Record payment</Button>}
             {canCancel && (
-              <Button variant="danger" onClick={() => action('Cancel', () => api(`/invoices/${id}/cancel`, { method: 'POST' }))} disabled={Boolean(busy)}>
+              <Button variant="danger" onClick={() => action('Cancel', () => api(`/invoices/${id}/cancel`, { method: 'POST' }))} disabled={Boolean(busy)} loading={busy === 'Cancel'}>
                 Cancel invoice
               </Button>
             )}
@@ -219,7 +239,7 @@ export default function InvoiceDetail({ id, navigate }) {
         footer={
           <>
             <Button variant="ghost" onClick={() => setPayOpen(false)}>Cancel</Button>
-            <Button onClick={submitPayment} disabled={busy === 'payment'}>{busy === 'payment' ? 'Recording…' : 'Record payment'}</Button>
+            <Button onClick={submitPayment} loading={busy === 'payment'}>{busy === 'payment' ? 'Recording…' : 'Record payment'}</Button>
           </>
         }
       >

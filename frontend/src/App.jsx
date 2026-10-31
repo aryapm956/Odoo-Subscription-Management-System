@@ -146,7 +146,9 @@ function Shell({ path, navigate, children }) {
             <span className="muted small">{user.name}</span>
           </div>
         </header>
-        <main className="content">{children}</main>
+        <main className="content">
+          <div className="route-transition" key={path}>{children}</div>
+        </main>
       </div>
     </div>
   )
@@ -218,7 +220,13 @@ export default function App() {
     }
   }, [user, path, navigate])
 
-  if (!user) return <AuthRouter path={path} params={params} navigate={navigate} />
+  if (!user) {
+    return (
+      <div className="route-transition auth-route" key={path}>
+        <AuthRouter path={path} params={params} navigate={navigate} />
+      </div>
+    )
+  }
 
   return (
     <Shell path={path} navigate={navigate}>

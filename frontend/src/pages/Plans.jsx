@@ -159,7 +159,7 @@ export default function Plans() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save plan'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Saving…' : 'Save plan'}</Button>
           </>
         }
       >

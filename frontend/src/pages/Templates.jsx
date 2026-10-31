@@ -121,7 +121,7 @@ export default function Templates() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save template'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Saving…' : 'Save template'}</Button>
           </>
         }
       >

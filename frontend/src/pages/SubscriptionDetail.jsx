@@ -89,27 +89,27 @@ export default function SubscriptionDetail({ id, navigate }) {
         <Card title="Actions" subtitle="Plan flags are enforced on the server.">
           <div className="action-stack">
             {isStaff && sub.status === 'draft' && (
-              <Button onClick={() => act('quotation')} disabled={Boolean(busy)}>Send quotation</Button>
+              <Button onClick={() => act('quotation')} disabled={Boolean(busy)} loading={busy === 'quotation'}>Send quotation</Button>
             )}
             {isStaff && sub.status === 'quotation' && (
               <>
-                <Button onClick={() => act('confirmed')} disabled={Boolean(busy)}>Confirm subscription</Button>
-                <Button variant="ghost" onClick={() => act('draft')} disabled={Boolean(busy)}>Back to draft</Button>
+                <Button onClick={() => act('confirmed')} disabled={Boolean(busy)} loading={busy === 'confirmed'}>Confirm subscription</Button>
+                <Button variant="ghost" onClick={() => act('draft')} disabled={Boolean(busy)} loading={busy === 'draft'}>Back to draft</Button>
               </>
             )}
             {isStaff && sub.status === 'confirmed' && (
-              <Button onClick={() => act('active')} disabled={Boolean(busy)}>Activate subscription</Button>
+              <Button onClick={() => act('active')} disabled={Boolean(busy)} loading={busy === 'active'}>Activate subscription</Button>
             )}
             {sub.status === 'active' && planFlags.pause && (
-              <Button variant="ghost" onClick={() => act('pause')} disabled={Boolean(busy)}>
+              <Button variant="ghost" onClick={() => act('pause')} disabled={Boolean(busy)} loading={busy === 'pause'}>
                 {sub.paused ? 'Resume subscription' : 'Pause subscription'}
               </Button>
             )}
             {sub.status === 'active' && planFlags.renew && (
-              <Button variant="ghost" onClick={() => act('renew')} disabled={Boolean(busy)}>Renew for next period</Button>
+              <Button variant="ghost" onClick={() => act('renew')} disabled={Boolean(busy)} loading={busy === 'renew'}>Renew for next period</Button>
             )}
             {['confirmed', 'active'].includes(sub.status) && (isStaff || planFlags.earlyClose) && (
-              <Button variant="danger" onClick={() => act('closed')} disabled={Boolean(busy)}>
+              <Button variant="danger" onClick={() => act('closed')} disabled={Boolean(busy)} loading={busy === 'closed'}>
                 Close subscription
               </Button>
             )}

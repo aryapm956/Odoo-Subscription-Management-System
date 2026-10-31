@@ -56,6 +56,7 @@ export function LoginPage({ navigate }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [shake, setShake] = useState(false)
 
   async function submit(e) {
     e.preventDefault()
@@ -66,6 +67,8 @@ export function LoginPage({ navigate }) {
       navigate(user.role === 'customer' ? '/portal/subscriptions' : '/dashboard')
     } catch (err) {
       setError(err.message)
+      setShake(true)
+      window.setTimeout(() => setShake(false), 360)
     } finally {
       setBusy(false)
     }
@@ -84,7 +87,7 @@ export function LoginPage({ navigate }) {
         </>
       }
     >
-      <form onSubmit={submit} className="form-stack">
+      <form onSubmit={submit} className={`form-stack login-form ${shake ? 'shake' : ''}`}>
         <ErrorBanner message={error} />
         <Field label="Email">
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" placeholder="you@company.com" />
@@ -97,7 +100,7 @@ export function LoginPage({ navigate }) {
             Forgot password?
           </button>
         </div>
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" loading={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
         <div className="demo-box">
@@ -184,7 +187,7 @@ export function SignupPage({ navigate }) {
         <Field label="Confirm password">
           <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
         </Field>
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" loading={busy}>
           {busy ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
@@ -229,7 +232,7 @@ export function ForgotPasswordPage({ navigate }) {
         <Field label="Registered email">
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" />
         </Field>
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" loading={busy}>
           {busy ? 'Sending…' : 'Send reset link'}
         </Button>
         <button type="button" className="link small" onClick={() => navigate('/dev-outbox')}>
@@ -297,7 +300,7 @@ export function ResetPasswordPage({ navigate, params }) {
         <Field label="Confirm new password">
           <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
         </Field>
-        <Button type="submit" disabled={busy || !token}>
+        <Button type="submit" disabled={busy || !token} loading={busy}>
           {busy ? 'Resetting…' : 'Reset password'}
         </Button>
       </form>

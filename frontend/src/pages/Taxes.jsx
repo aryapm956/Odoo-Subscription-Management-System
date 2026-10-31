@@ -97,7 +97,7 @@ export default function Taxes() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save tax'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Saving…' : 'Save tax'}</Button>
           </>
         }
       >

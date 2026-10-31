@@ -95,7 +95,7 @@ export default function Staff() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModal(false)}>Cancel</Button>
-            <Button onClick={save} disabled={busy}>{busy ? 'Inviting…' : 'Create staff'}</Button>
+            <Button onClick={save} loading={busy}>{busy ? 'Inviting…' : 'Create staff'}</Button>
           </>
         }
       >

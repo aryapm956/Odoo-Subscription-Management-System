@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export function PageHeader({ title, subtitle, actions }) {
   return (
@@ -29,8 +29,19 @@ export function Card({ title, subtitle, actions, children, className = '' }) {
   )
 }
 
-export function Button({ variant = 'primary', size = 'md', type = 'button', className = '', ...props }) {
-  return <button type={type} className={`btn btn-${variant} btn-${size} ${className}`} {...props} />
+export function Button({ variant = 'primary', size = 'md', type = 'button', className = '', loading = false, children, disabled, ...props }) {
+  return (
+    <button
+      type={type}
+      className={`btn btn-${variant} btn-${size} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...props}
+    >
+      {loading && <span className="button-spinner" aria-hidden="true" />}
+      {children}
+    </button>
+  )
 }
 
 export function Field({ label, hint, children, className = '' }) {
@@ -82,9 +93,64 @@ export function Pagination({ page, pageSize, total, onPage }) {
 
 export function Spinner({ label = 'Loading…' }) {
   return (
-    <div className="loading">
-      <span className="spinner" />
-      <span className="muted">{label}</span>
+    <div className="loading loading-skeleton" role="status" aria-label={label} aria-busy="true">
+      <span className="skeleton skeleton-heading" />
+      <span className="skeleton skeleton-line" />
+      <div className="skeleton-table">
+        {Array.from({ length: 5 }, (_, index) => <span className="skeleton skeleton-row" key={index} />)}
+      </div>
+    </div>
+  )
+}
+
+export function AnimatedNumber({ value, currency = false, duration = 800 }) {
+  const target = Number(value) || 0
+  const [displayValue, setDisplayValue] = useState(0)
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  useEffect(() => {
+    if (reducedMotion) return undefined
+
+    let frame
+    const startedAt = performance.now()
+    const animate = (now) => {
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const eased = 1 - (1 - progress) ** 3
+      setDisplayValue(target * eased)
+      if (progress < 1) frame = requestAnimationFrame(animate)
+    }
+    frame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(frame)
+  }, [target, duration, reducedMotion])
+
+  const shownValue = reducedMotion ? target : displayValue
+
+  return (
+    <span>
+      {currency
+        ? `₹${shownValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : Math.round(shownValue).toLocaleString('en-IN')}
+    </span>
+  )
+}
+
+export function Toast({ message, onClose, duration = 4500 }) {
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    if (!message) return undefined
+    const timeout = window.setTimeout(() => {
+      setVisible(false)
+    }, duration)
+    return () => window.clearTimeout(timeout)
+  }, [message, duration])
+
+  if (!message || !visible) return null
+  return (
+    <div className="toast" role="status">
+      <span>{message}</span>
+      <button className="icon-btn" onClick={() => { setVisible(false); onClose?.() }} aria-label="Dismiss notification">×</button>
+      <span className="toast-progress" style={{ animationDuration: `${duration}ms` }} />
     </div>
   )
 }
@@ -164,16 +230,21 @@ export function Tabs({ tabs, value, onChange }) {
 export function Stepper({ steps, current }) {
   const currentIndex = steps.findIndex((s) => s.value === current)
   return (
-    <ol className="stepper">
-      {steps.map((step, idx) => {
-        const state = idx < currentIndex ? 'done' : idx === currentIndex ? 'current' : 'todo'
-        return (
-          <li key={step.value} className={`step step-${state}`}>
-            <span className="step-dot">{idx < currentIndex ? '✓' : idx + 1}</span>
-            <span>{step.label}</span>
-          </li>
-        )
-      })}
-    </ol>
+    <div className="stepper">
+      <div className="stepper-line" aria-hidden="true">
+        <span style={{ width: `${steps.length > 1 ? Math.max(0, currentIndex) / (steps.length - 1) * 100 : 0}%` }} />
+      </div>
+      <ol className="stepper-steps">
+        {steps.map((step, idx) => {
+          const state = idx < currentIndex ? 'done' : idx === currentIndex ? 'current' : 'todo'
+          return (
+            <li key={step.value} className={`step step-${state}`}>
+              <span className="step-dot">{idx < currentIndex ? '✓' : idx + 1}</span>
+              <span>{step.label}</span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
